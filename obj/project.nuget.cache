@@ -1,9 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "t8zzIBDrGKSD23TQCob2c89VSZ//UzZorxDM3pFi5WcrWkqtW2xaeh0oL/CiBLMyEGc/SSb3kstisj2px1lWfw==",
+  "dgSpecHash": "SeUDaQ6CZUhdCc95jip9ptcv0gw4jrgXBYCVF5VXrnadYAfhpePlaSR+5uE9Mu8hX70IDIBWaYlKzCYwrc9o2A==",
   "success": true,
   "projectFilePath": "/Users/blesial/Desktop/ProductoChona/ProductsChona/ProductsChona.csproj",
   "expectedPackageFiles": [
+    "/Users/blesial/.nuget/packages/automapper/12.0.1/automapper.12.0.1.nupkg.sha512",
+    "/Users/blesial/.nuget/packages/automapper.extensions.microsoft.dependencyinjection/12.0.1/automapper.extensions.microsoft.dependencyinjection.12.0.1.nupkg.sha512",
     "/Users/blesial/.nuget/packages/azure.core/1.25.0/azure.core.1.25.0.nupkg.sha512",
     "/Users/blesial/.nuget/packages/azure.identity/1.7.0/azure.identity.1.7.0.nupkg.sha512",
     "/Users/blesial/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",

@@ -11,41 +11,43 @@ namespace ProductsChona.Controllers
     [ApiController]
     [Route("products/Controller")]
     public class ProductController : ControllerBase
-{
-    private readonly ILogger<ProductController> _logger;
-    private readonly ApplicationDbContext _db;
-    public ProductController(ILogger<ProductController> logger, ApplicationDbContext db)
     {
-        _logger = logger;
-        _db = db;
-    }
-    
+        private readonly ILogger<ProductController> _logger;
+        private readonly ApplicationDbContext _db;
+        public ProductController(ILogger<ProductController> logger, ApplicationDbContext db)
+        {
+            _logger = logger;
+            _db = db;
+        }
+
         [HttpGet]
         [ProducesResponseType(200)]
 
-// actionresult es un wrapper que nos permite devolver un valor de cualquier tipo. asi podemos usar el ok que devulve un objecto con status code!
-// el action result se usa para acciones que son manejadas por el controller y devuelven un response. 
-        public ActionResult<IEnumerable<ProductDto>> GetProducts()
+        // actionresult es un wrapper que nos permite devolver un valor de cualquier tipo. asi podemos usar el ok que devulve un objecto con status code!
+        // el action result se usa para acciones que son manejadas por el controller y devuelven un response. 
+
+        // con Task wrapper y el async await convertimos en asincrono toda la movida. 
+        public async  Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
         {
             _logger.LogInformation("Obteniendo productos");
-            return Ok(_db.Products.ToList());
+            return Ok(await _db.Products.ToListAsync());
         }
-        
+
         [HttpGet("id", Name = "GetProduct")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
 
 
-        public ActionResult<ProductDto> GetProduct(int Id)
+        public async Task<ActionResult<ProductDto>> GetProduct(int Id)
         {
-            if (Id == 0) 
+            if (Id == 0)
             {
                 _logger.LogError("Error a traer producto con id " + Id);
                 return BadRequest();
             }
-            var product = _db.Products.FirstOrDefault(v=>v.Id == Id);
-    
+            var product = await _db.Products.FirstOrDefaultAsync(v => v.Id == Id);
+
             if (product == null)
             {
                 return NotFound();
@@ -57,17 +59,24 @@ namespace ProductsChona.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public ActionResult<ProductDto> CreateProduct([FromBody] ProductDto productDto)
+        public async Task<ActionResult<ProductDto>> CreateProduct([FromBody] ProductCreateDto productDto)
         {
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if (await _db.Products.FirstOrDefaultAsync(p => p.Name.ToLower() == productDto.Name.ToLower()) != null)
+            {
+                ModelState.AddModelError("Nombre ya existe", "El producto con ese nombre ya existe");
+            }
+
             if (productDto == null)
             {
                 return BadRequest(productDto);
             }
-            if (productDto.Id > 0)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError);
-            }
+
             // productDto.Id = _db.Products.OrderByDescending(p => p.Id).FirstOrDefault().Id + 1;
             Product modelo = new()
             {
@@ -77,10 +86,10 @@ namespace ProductsChona.Controllers
                 Thumbnail = productDto.Thumbnail
             };
 
-            _db.Products.Add(modelo); // INSERT
-            _db.SaveChanges(); // GUARDAR EN BASE DE DATOS
-            
-            return CreatedAtRoute("GetProduct", new {id=productDto.Id}, productDto);
+            await _db.Products.AddAsync(modelo); // INSERT
+            await _db.SaveChangesAsync(); // GUARDAR EN BASE DE DATOS
+
+            return CreatedAtRoute("GetProduct", new { id =modelo.Id }, modelo);
         }
 
         [HttpDelete("id")]
@@ -90,20 +99,20 @@ namespace ProductsChona.Controllers
 
         // aca no es necesario el action result, la interfaz no va a necesitar del modelo. siempre cuando trabajamos con deletes
         // se debe retornar un NO CONTENT. 
-        public IActionResult DeleteProduct(int id)
+        public async Task<IActionResult> DeleteProduct(int id)
         {
             if (id == 0)
             {
                 return BadRequest();
             }
-            var productSearch = _db.Products.FirstOrDefault(p => p.Id == id);
+            var productSearch = await _db.Products.FirstOrDefaultAsync(p => p.Id == id);
             if (productSearch == null)
             {
                 return NotFound();
-            } 
-
+            }
+            // Remove SIEMPRE es metodo sincrono. 
             _db.Products.Remove(productSearch);
-             _db.SaveChanges(); // Guardar los cambios en la base de datos
+            await _db.SaveChangesAsync(); // Guardar los cambios en la base de datos
 
             return NoContent();
         }
@@ -113,13 +122,13 @@ namespace ProductsChona.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
 
 
-        public IActionResult UpdateProduct([FromBody] ProductDto productDto)
+        public async Task<IActionResult> UpdateProduct([FromBody] ProductUpdateDto productDto)
         {
             if (productDto == null)
             {
                 return BadRequest();
             }
-            
+
             // var productToUpdate = _db.Products.FirstOrDefault(p => p.Id == productDto.Id);
             // productToUpdate.Name = productDto.Name;
             // productToUpdate.Price = productDto.Price;
@@ -134,9 +143,10 @@ namespace ProductsChona.Controllers
 
             };
 
+            // update al igual que remove ES SINCRONO
             _db.Products.Update(modelo);
-            _db.SaveChanges();
-         
+            await _db.SaveChangesAsync();
+
 
             return NoContent();
         }
@@ -144,7 +154,7 @@ namespace ProductsChona.Controllers
         [HttpPatch("id")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-             public IActionResult ParcialUpdateProduct(int id, JsonPatchDocument<ProductDto> patchDto)
+        public async Task<IActionResult> ParcialUpdateProduct(int id, JsonPatchDocument<ProductUpdateDto> patchDto)
         {
             if (patchDto == null || id == 0)
             {
@@ -152,11 +162,11 @@ namespace ProductsChona.Controllers
             }
             // antes de modificarlo necesitaymos el registro que se va a modificar
             // el asnotracking es para que no trackee el id. porque mas abajo volvemos a hacer una copia con el mismo id. 
-            var product = _db.Products.AsNoTracking().FirstOrDefault(p => p.Id == id);
+            var product = await _db.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
 
 
             // antes de actualizarlo lo guardamos temporalemnte antes que haya un cambio. 
-            ProductDto modeloProductDto= new()
+            ProductUpdateDto modeloProductDto = new()
             {
                 Id = product.Id,
                 Name = product.Name,
@@ -186,9 +196,9 @@ namespace ProductsChona.Controllers
             };
 
             _db.Products.Update(modelo);
-            _db.SaveChanges();
+            await _db.SaveChangesAsync();
 
             return NoContent();
-        } 
+        }
     }
-} 
+}
