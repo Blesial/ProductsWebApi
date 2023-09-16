@@ -1,3 +1,4 @@
+using AutoMapper;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,10 +15,14 @@ namespace ProductsChona.Controllers
     {
         private readonly ILogger<ProductController> _logger;
         private readonly ApplicationDbContext _db;
-        public ProductController(ILogger<ProductController> logger, ApplicationDbContext db)
+
+        private readonly IMapper _mapper;
+        
+        public ProductController(ILogger<ProductController> logger, ApplicationDbContext db, IMapper mapper)
         {
             _logger = logger;
             _db = db;
+            _mapper = mapper;
         }
 
         [HttpGet]
@@ -30,7 +35,10 @@ namespace ProductsChona.Controllers
         public async  Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
         {
             _logger.LogInformation("Obteniendo productos");
-            return Ok(await _db.Products.ToListAsync());
+
+            IEnumerable<Product> productList = await _db.Products.ToListAsync();
+
+            return Ok(_mapper.Map<IEnumerable<ProductDto>>(productList));
         }
 
         [HttpGet("id", Name = "GetProduct")]
